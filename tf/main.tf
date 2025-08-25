@@ -6,10 +6,17 @@ data "external" "oci_config" {
   program = ["bash", "-c", "grep -E '^(tenancy|user)=' ~/.oci/config | sed 's/=/\":\"/' | sed 's/^/\"/' | sed 's/$/\",/' | tr -d '\n' | sed 's/,$//' | sed 's/^/{/' | sed 's/$/}/'"]
 }
 
+# Get current username
+data "external" "current_user" {
+  program = ["bash", "-c", "echo '{\"username\":\"'$(whoami)'\"}'"]
+}
+
 locals {
   tenancy_ocid   = data.external.oci_config.result.tenancy
   user_ocid      = data.external.oci_config.result.user
   compartment_id = coalesce(var.compartment_ocid, local.tenancy_ocid)
+  username       = var.username != null ? var.username : data.external.current_user.result.username
+  cluster_name   = var.cluster_name != null ? var.cluster_name : "${local.username}-arm-oke-cluster"
 }
 
 # Get availability domains
@@ -31,7 +38,7 @@ data "oci_core_images" "arm_images" {
 resource "oci_core_vcn" "vcn" {
   compartment_id = local.compartment_id
   cidr_blocks    = ["10.0.0.0/16"]
-  display_name   = "${var.cluster_name}-vcn"
+  display_name   = "${local.cluster_name}-vcn"
   dns_label      = "armokecluster"
 }
 
@@ -39,21 +46,21 @@ resource "oci_core_vcn" "vcn" {
 resource "oci_core_internet_gateway" "igw" {
   compartment_id = local.compartment_id
   vcn_id         = oci_core_vcn.vcn.id
-  display_name   = "${var.cluster_name}-igw"
+  display_name   = "${local.cluster_name}-igw"
 }
 
 # NAT gateway for private subnet outbound access
 resource "oci_core_nat_gateway" "ngw" {
   compartment_id = local.compartment_id
   vcn_id         = oci_core_vcn.vcn.id
-  display_name   = "${var.cluster_name}-ngw"
+  display_name   = "${local.cluster_name}-ngw"
 }
 
 # Route table for public subnet
 resource "oci_core_route_table" "public_rt" {
   compartment_id = local.compartment_id
   vcn_id         = oci_core_vcn.vcn.id
-  display_name   = "${var.cluster_name}-public-rt"
+  display_name   = "${local.cluster_name}-public-rt"
   
   route_rules {
     destination       = "0.0.0.0/0"
@@ -65,7 +72,7 @@ resource "oci_core_route_table" "public_rt" {
 resource "oci_core_route_table" "private_rt" {
   compartment_id = local.compartment_id
   vcn_id         = oci_core_vcn.vcn.id
-  display_name   = "${var.cluster_name}-private-rt"
+  display_name   = "${local.cluster_name}-private-rt"
   
   route_rules {
     destination       = "0.0.0.0/0"
@@ -77,7 +84,7 @@ resource "oci_core_route_table" "private_rt" {
 resource "oci_core_security_list" "oke_sl" {
   compartment_id = local.compartment_id
   vcn_id         = oci_core_vcn.vcn.id
-  display_name   = "${var.cluster_name}-oke-sl"
+  display_name   = "${local.cluster_name}-oke-sl"
   
   # Allow all egress
   egress_security_rules {
@@ -117,7 +124,7 @@ resource "oci_core_subnet" "public_subnet" {
   compartment_id             = local.compartment_id
   vcn_id                     = oci_core_vcn.vcn.id
   cidr_block                 = "10.0.1.0/24"
-  display_name               = "${var.cluster_name}-public"
+  display_name               = "${local.cluster_name}-public"
   dns_label                  = "public"
   route_table_id             = oci_core_route_table.public_rt.id
   security_list_ids          = [oci_core_security_list.oke_sl.id]
@@ -129,7 +136,7 @@ resource "oci_core_subnet" "private_subnet" {
   compartment_id             = local.compartment_id
   vcn_id                     = oci_core_vcn.vcn.id
   cidr_block                 = "10.0.2.0/24"
-  display_name               = "${var.cluster_name}-private"
+  display_name               = "${local.cluster_name}-private"
   dns_label                  = "private"
   route_table_id             = oci_core_route_table.private_rt.id
   security_list_ids          = [oci_core_security_list.oke_sl.id]
@@ -140,7 +147,7 @@ resource "oci_core_subnet" "private_subnet" {
 resource "oci_containerengine_cluster" "arm_cluster" {
   compartment_id     = local.compartment_id
   kubernetes_version = var.kubernetes_version
-  name               = var.cluster_name
+  name               = local.cluster_name
   vcn_id             = oci_core_vcn.vcn.id
   
   endpoint_config {
@@ -168,7 +175,7 @@ resource "oci_containerengine_node_pool" "arm_pool" {
   compartment_id     = local.compartment_id
   cluster_id         = oci_containerengine_cluster.arm_cluster.id
   kubernetes_version = var.kubernetes_version
-  name               = "${var.cluster_name}-arm-pool"
+  name               = "${local.cluster_name}-arm-pool"
   node_shape         = "VM.Standard.A1.Flex"
   
   node_config_details {
@@ -214,4 +221,35 @@ resource "oci_containerengine_node_pool" "arm_pool" {
     key   = "node.kubernetes.io/instance-type"
     value = "arm64"
   }
+}
+
+# Monitoring with kube-prometheus-stack
+module "monitoring" {
+  source = "../modules/monitoring"
+  
+  cluster_id = oci_containerengine_cluster.arm_cluster.id
+  
+  # Storage configuration (reduced for testing)
+  storage_class           = "oci-bv"
+  prometheus_storage_size = "10Gi"
+  grafana_storage_size    = "2Gi"
+  
+  # Grafana configuration
+  grafana_admin_password    = var.grafana_admin_password
+  grafana_service_type      = "LoadBalancer"
+  grafana_persistence_enabled = false
+  
+  # Component configuration
+  node_exporter_enabled       = true
+  kube_state_metrics_enabled  = true
+  
+  tags = {
+    Environment = "development"
+    Project     = "arm-oke-cluster"
+    ManagedBy   = "terraform"
+  }
+  
+  depends_on = [
+    oci_containerengine_node_pool.arm_pool
+  ]
 }

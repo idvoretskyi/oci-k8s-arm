@@ -37,9 +37,9 @@ variable "private_key_path" {
 }
 
 variable "cluster_name" {
-  description = "Name of the ARM OKE cluster"
+  description = "Name of the ARM OKE cluster (optional, defaults to {username}-arm-oke-cluster)"
   type        = string
-  default     = "arm-oke-cluster"
+  default     = null
 }
 
 variable "kubernetes_version" {
@@ -64,4 +64,18 @@ variable "node_ocpus" {
   description = "OCPUs per ARM node"
   type        = number
   default     = 2
+}
+
+variable "username" {
+  description = "Username for resource naming (optional)"
+  type        = string
+  default     = null
+}
+
+# Monitoring variables
+variable "grafana_admin_password" {
+  description = "Admin password for Grafana dashboard"
+  type        = string
+  default     = "admin123!"
+  sensitive   = true
 }
