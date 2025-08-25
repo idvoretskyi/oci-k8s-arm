@@ -5,15 +5,12 @@
 region = "uk-london-1"
 
 # Compartment will be read from ~/.oci/config if not specified
-# compartment_ocid = "your-compartment-ocid-here"
 
 # Path to your private key for API access
 # private_key_path will be read from ~/.oci/config if not specified
-# private_key_path = "/Users/idv/.oci/oci_api_key.pem"
 
 # ARM Kubernetes cluster configuration
 # cluster_name will be auto-generated as {username}-arm-oke-cluster
-# cluster_name = "idv-arm-oke-cluster"
 kubernetes_version = "v1.33.1"
 
 # ARM node configuration - start small for testing

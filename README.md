@@ -1,5 +1,7 @@
 # OCI ARM Kubernetes Cluster
 
+[![Security Scan](https://github.com/idvoretskyi/oci-k8s/actions/workflows/security-scan.yml/badge.svg)](https://github.com/idvoretskyi/oci-k8s/actions/workflows/security-scan.yml)
+
 Simple OpenTofu configuration for deploying ARM-based Kubernetes clusters on Oracle Cloud Infrastructure (OCI) in the London region.
 
 ## Features
