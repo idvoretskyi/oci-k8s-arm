@@ -223,33 +223,3 @@ resource "oci_containerengine_node_pool" "arm_pool" {
   }
 }
 
-# Monitoring with kube-prometheus-stack
-module "monitoring" {
-  source = "../modules/monitoring"
-  
-  cluster_id = oci_containerengine_cluster.arm_cluster.id
-  
-  # Storage configuration (reduced for testing)
-  storage_class           = "oci-bv"
-  prometheus_storage_size = "10Gi"
-  grafana_storage_size    = "2Gi"
-  
-  # Grafana configuration
-  grafana_admin_password    = var.grafana_admin_password
-  grafana_service_type      = "LoadBalancer"
-  grafana_persistence_enabled = false
-  
-  # Component configuration
-  node_exporter_enabled       = true
-  kube_state_metrics_enabled  = true
-  
-  tags = {
-    Environment = "development"
-    Project     = "arm-oke-cluster"
-    ManagedBy   = "terraform"
-  }
-  
-  depends_on = [
-    oci_containerengine_node_pool.arm_pool
-  ]
-}
