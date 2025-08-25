@@ -23,11 +23,11 @@ provider "kubernetes" {
 
 # Helm provider for deploying Helm charts
 provider "helm" {
-  kubernetes = {
+  kubernetes {
     host     = "https://${oci_containerengine_cluster.arm_cluster.endpoints[0].public_endpoint}"
     insecure = true
-    
-    exec = {
+
+    exec {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "oci"
       args = [
