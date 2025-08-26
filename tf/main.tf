@@ -223,3 +223,42 @@ resource "oci_containerengine_node_pool" "arm_pool" {
   }
 }
 
+# Deploy metrics-server for Kubernetes Metrics API
+resource "null_resource" "metrics_server" {
+  triggers = {
+    cluster_endpoint = oci_containerengine_cluster.arm_cluster.endpoints[0].public_endpoint
+    cluster_id       = oci_containerengine_cluster.arm_cluster.id
+  }
+  
+  provisioner "local-exec" {
+    command = <<-EOT
+      # Wait for cluster to be ready
+      sleep 30
+      
+      # Apply metrics-server
+      kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+      
+      # Wait for metrics-server to be ready
+      kubectl wait --for=condition=ready pod -l k8s-app=metrics-server -n kube-system --timeout=120s || true
+    EOT
+    
+    environment = {
+      KUBECONFIG = pathexpand("~/.kube/config")
+    }
+  }
+  
+  provisioner "local-exec" {
+    when    = destroy
+    command = "kubectl delete -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml --ignore-not-found=true || true"
+    
+    environment = {
+      KUBECONFIG = pathexpand("~/.kube/config")
+    }
+  }
+  
+  depends_on = [
+    oci_containerengine_node_pool.arm_pool
+  ]
+}
+
+
