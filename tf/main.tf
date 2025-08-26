@@ -180,7 +180,7 @@ resource "oci_containerengine_node_pool" "arm_pool" {
   
   node_config_details {
     size = var.node_count
-    is_pv_encryption_in_transit_enabled = true
+    is_pv_encryption_in_transit_enabled = false
     
     placement_configs {
       availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name

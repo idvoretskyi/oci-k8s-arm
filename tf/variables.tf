@@ -51,7 +51,7 @@ variable "kubernetes_version" {
 variable "node_count" {
   description = "Number of ARM worker nodes"
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "node_memory_gb" {
