@@ -60,7 +60,7 @@ Key variables in `terraform.tfvars`:
 
 ```hcl
 cluster_name = "simple-arm-oke"
-kubernetes_version = "v1.30.1"
+kubernetes_version = "v1.34.1"
 node_count = 1
 node_memory_gb = 6
 node_ocpus = 1
