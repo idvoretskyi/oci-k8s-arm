@@ -48,7 +48,8 @@ jobs:
 
       - name: Install Terrascan
         run: |
-          curl -L "$(curl -s https://api.github.com/repos/tenable/terrascan/releases/latest | grep -o -E "https://.+?_Linux_x86_64.tar.gz")" > terrascan.tar.gz
+          # Use jq to reliably extract the browser_download_url for the Linux x86_64 asset
+          curl -L "$(curl -s https://api.github.com/repos/tenable/terrascan/releases/latest | jq -r '.assets[] | select(.name | test("Linux_x86_64.tar.gz$")) | .browser_download_url')" -o terrascan.tar.gz
           tar -xf terrascan.tar.gz terrascan
           sudo mv terrascan /usr/local/bin/
           rm terrascan.tar.gz
