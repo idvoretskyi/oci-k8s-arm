@@ -14,6 +14,6 @@ region = "uk-london-1"
 kubernetes_version = "v1.34.1"
 
 # ARM node configuration - 3 nodes with encryption in transit disabled  
-node_count = 3
+node_count     = 3
 node_memory_gb = 6
-node_ocpus = 1
+node_ocpus     = 1

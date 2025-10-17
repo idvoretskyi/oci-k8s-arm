@@ -27,7 +27,7 @@ locals {
   # Grafana service configuration
   grafana_service_type = var.grafana_ingress_enabled ? "ClusterIP" : var.grafana_service_type
 
-# Simplified configuration - using values.yaml.tpl for all configuration
+  # Simplified configuration - using values.yaml.tpl for all configuration
 }
 
 #######################
@@ -45,7 +45,7 @@ resource "kubernetes_namespace" "monitoring" {
   metadata {
     name = var.monitoring_namespace
     labels = {
-      name = var.monitoring_namespace
+      name                           = var.monitoring_namespace
       "app.kubernetes.io/managed-by" = "terraform"
     }
   }
@@ -54,16 +54,16 @@ resource "kubernetes_namespace" "monitoring" {
 # Create storage class if needed
 resource "kubernetes_storage_class" "monitoring_storage" {
   count = var.create_storage_class ? 1 : 0
-  
+
   metadata {
     name = var.storage_class
   }
-  
+
   storage_provisioner    = "blockvolume.csi.oraclecloud.com"
-  reclaim_policy        = "Retain"
+  reclaim_policy         = "Retain"
   allow_volume_expansion = true
-  volume_binding_mode   = "WaitForFirstConsumer"
-  
+  volume_binding_mode    = "WaitForFirstConsumer"
+
   parameters = {
     "fsType" = "ext4"
   }
@@ -89,10 +89,10 @@ resource "helm_release" "kube_prometheus_stack" {
   # Configuration through values
   values = [
     templatefile("${path.module}/values.yaml.tpl", {
-      storage_class                = var.storage_class
-      prometheus_storage_size      = var.prometheus_storage_size
-      prometheus_retention         = var.prometheus_retention
-      prometheus_retention_size    = var.prometheus_retention_size
+      storage_class               = var.storage_class
+      prometheus_storage_size     = var.prometheus_storage_size
+      prometheus_retention        = var.prometheus_retention
+      prometheus_retention_size   = var.prometheus_retention_size
       grafana_service_type        = local.grafana_service_type
       grafana_admin_password      = var.grafana_admin_password
       grafana_persistence_enabled = var.grafana_persistence_enabled
