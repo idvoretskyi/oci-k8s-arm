@@ -32,7 +32,7 @@ locals {
 
   # Determine if the shape is a flex shape
   is_flex_shape = contains(["VM.Standard.E3.Flex", "VM.Standard.E4.Flex", "VM.Standard.A1.Flex", "VM.Optimized3.Flex"], var.node_shape)
-  
+
   # Determine if shape is ARM-based
   is_arm_shape = contains(["VM.Standard.A1.Flex"], var.node_shape)
 

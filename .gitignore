@@ -44,3 +44,5 @@ Thumbs.db
 # Log files
 *.log
 tf/.terraform.lock.hcl
+.claude/
+tf/.claude/
