@@ -48,9 +48,6 @@ tf/.terraform.lock.hcl
 # AI assistant files
 .claude/
 tf/.claude/
-.aider*
-.cursor/
 .copilot/
 *.copilot-chat-*
 .github-copilot/
-.ai/
