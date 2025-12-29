@@ -1,12 +1,7 @@
-# Simple ARM OKE Cluster Configuration
-# Based on Oracle's ARM Kubernetes tutorial
-
-# Get tenancy and user info from OCI config
 data "external" "oci_config" {
   program = ["bash", "-c", "grep -E '^(tenancy|user)=' ~/.oci/config | sed 's/=/\":\"/' | sed 's/^/\"/' | sed 's/$/\",/' | tr -d '\n' | sed 's/,$//' | sed 's/^/{/' | sed 's/$/}/'"]
 }
 
-# Get current username
 data "external" "current_user" {
   program = ["bash", "-c", "echo '{\"username\":\"'$(whoami)'\"}'"]
 }
@@ -19,12 +14,10 @@ locals {
   cluster_name   = var.cluster_name != null ? var.cluster_name : "${local.username}-arm-oke-cluster"
 }
 
-# Get availability domains
 data "oci_identity_availability_domains" "ads" {
   compartment_id = local.compartment_id
 }
 
-# Get latest ARM-compatible Oracle Linux image
 data "oci_core_images" "arm_images" {
   compartment_id           = local.compartment_id
   operating_system         = "Oracle Linux"
@@ -34,7 +27,6 @@ data "oci_core_images" "arm_images" {
   sort_order               = "DESC"
 }
 
-# Create VCN with simple configuration
 resource "oci_core_vcn" "vcn" {
   compartment_id = local.compartment_id
   cidr_blocks    = ["10.0.0.0/16"]
@@ -42,21 +34,18 @@ resource "oci_core_vcn" "vcn" {
   dns_label      = "armokecluster"
 }
 
-# Internet gateway for public access
 resource "oci_core_internet_gateway" "igw" {
   compartment_id = local.compartment_id
   vcn_id         = oci_core_vcn.vcn.id
   display_name   = "${local.cluster_name}-igw"
 }
 
-# NAT gateway for private subnet outbound access
 resource "oci_core_nat_gateway" "ngw" {
   compartment_id = local.compartment_id
   vcn_id         = oci_core_vcn.vcn.id
   display_name   = "${local.cluster_name}-ngw"
 }
 
-# Route table for public subnet
 resource "oci_core_route_table" "public_rt" {
   compartment_id = local.compartment_id
   vcn_id         = oci_core_vcn.vcn.id
@@ -68,7 +57,6 @@ resource "oci_core_route_table" "public_rt" {
   }
 }
 
-# Route table for private subnet
 resource "oci_core_route_table" "private_rt" {
   compartment_id = local.compartment_id
   vcn_id         = oci_core_vcn.vcn.id
@@ -80,25 +68,21 @@ resource "oci_core_route_table" "private_rt" {
   }
 }
 
-# Security list with minimal required rules for OKE
 resource "oci_core_security_list" "oke_sl" {
   compartment_id = local.compartment_id
   vcn_id         = oci_core_vcn.vcn.id
   display_name   = "${local.cluster_name}-oke-sl"
 
-  # Allow all egress
   egress_security_rules {
     destination = "0.0.0.0/0"
     protocol    = "all"
   }
 
-  # Allow all traffic within VCN
   ingress_security_rules {
     protocol = "all"
     source   = "10.0.0.0/16"
   }
 
-  # Allow Kubernetes API access
   ingress_security_rules {
     protocol = "6"
     source   = "0.0.0.0/0"
@@ -108,7 +92,6 @@ resource "oci_core_security_list" "oke_sl" {
     }
   }
 
-  # Allow ICMP for path discovery
   ingress_security_rules {
     protocol = "1"
     source   = "0.0.0.0/0"
@@ -119,7 +102,6 @@ resource "oci_core_security_list" "oke_sl" {
   }
 }
 
-# Public subnet for load balancers and API endpoint
 resource "oci_core_subnet" "public_subnet" {
   compartment_id             = local.compartment_id
   vcn_id                     = oci_core_vcn.vcn.id
@@ -131,7 +113,6 @@ resource "oci_core_subnet" "public_subnet" {
   prohibit_public_ip_on_vnic = false
 }
 
-# Private subnet for worker nodes (recommended by Oracle)
 resource "oci_core_subnet" "private_subnet" {
   compartment_id             = local.compartment_id
   vcn_id                     = oci_core_vcn.vcn.id
@@ -143,7 +124,6 @@ resource "oci_core_subnet" "private_subnet" {
   prohibit_public_ip_on_vnic = true
 }
 
-# OKE Cluster - ARM optimized
 resource "oci_containerengine_cluster" "arm_cluster" {
   compartment_id     = local.compartment_id
   kubernetes_version = var.kubernetes_version
@@ -170,7 +150,6 @@ resource "oci_containerengine_cluster" "arm_cluster" {
   }
 }
 
-# ARM Node Pool - simplified configuration
 resource "oci_containerengine_node_pool" "arm_pool" {
   compartment_id     = local.compartment_id
   cluster_id         = oci_containerengine_cluster.arm_cluster.id
@@ -204,26 +183,22 @@ resource "oci_containerengine_node_pool" "arm_pool" {
     boot_volume_size_in_gbs = 50
   }
 
-  # Launch options for in-transit encryption
   initial_node_labels {
     key   = "oci.oraclecloud.com/encrypt-in-transit"
     value = "true"
   }
 
-  # ARM architecture label
   initial_node_labels {
     key   = "kubernetes.io/arch"
     value = "arm64"
   }
 
-  # ARM node pool label
   initial_node_labels {
     key   = "node.kubernetes.io/instance-type"
     value = "arm64"
   }
 }
 
-# Deploy metrics-server for Kubernetes Metrics API
 resource "null_resource" "metrics_server" {
   triggers = {
     cluster_endpoint = oci_containerengine_cluster.arm_cluster.endpoints[0].public_endpoint
@@ -232,13 +207,8 @@ resource "null_resource" "metrics_server" {
 
   provisioner "local-exec" {
     command = <<-EOT
-      # Wait for cluster to be ready
       sleep 30
-      
-      # Apply metrics-server
       kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-      
-      # Wait for metrics-server to be ready
       kubectl wait --for=condition=ready pod -l k8s-app=metrics-server -n kube-system --timeout=120s || true
     EOT
 
@@ -256,9 +226,5 @@ resource "null_resource" "metrics_server" {
     }
   }
 
-  depends_on = [
-    oci_containerengine_node_pool.arm_pool
-  ]
+  depends_on = [oci_containerengine_node_pool.arm_pool]
 }
-
-

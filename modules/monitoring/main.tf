@@ -1,46 +1,15 @@
-/**
- * Monitoring Module for OKE Cluster
- * 
- * This module deploys kube-prometheus-stack using Helm for comprehensive
- * Kubernetes monitoring including Prometheus, Grafana, and Alertmanager.
- */
-
-#######################
-# Local Variables     #
-#######################
-
 locals {
-  # Resource naming with consistent pattern
   resource_name_prefix = var.monitoring_namespace
-
-  # Default monitoring tags
   monitoring_tags = {
     "ResourceType" = "Monitoring"
     "Component"    = "KubePrometheusStack"
     "AutomatedBy"  = "OpenTofu"
     "CreatedAt"    = timestamp()
   }
-
-  # Combined tags for all resources
-  all_tags = merge(var.tags, local.monitoring_tags)
-
-  # Grafana service configuration
+  all_tags             = merge(var.tags, local.monitoring_tags)
   grafana_service_type = var.grafana_ingress_enabled ? "ClusterIP" : var.grafana_service_type
-
-  # Simplified configuration - using values.yaml.tpl for all configuration
 }
 
-#######################
-# Data Sources        #
-#######################
-
-# Cluster information is handled via provider authentication
-
-#######################
-# Kubernetes Resources#
-#######################
-
-# Create monitoring namespace
 resource "kubernetes_namespace" "monitoring" {
   metadata {
     name = var.monitoring_namespace
@@ -51,7 +20,6 @@ resource "kubernetes_namespace" "monitoring" {
   }
 }
 
-# Create storage class if needed
 resource "kubernetes_storage_class" "monitoring_storage" {
   count = var.create_storage_class ? 1 : 0
 
@@ -69,11 +37,6 @@ resource "kubernetes_storage_class" "monitoring_storage" {
   }
 }
 
-#######################
-# Helm Chart          #
-#######################
-
-# Deploy kube-prometheus-stack using Helm
 resource "helm_release" "kube_prometheus_stack" {
   name       = var.release_name
   repository = "https://prometheus-community.github.io/helm-charts"
@@ -81,12 +44,10 @@ resource "helm_release" "kube_prometheus_stack" {
   version    = var.chart_version
   namespace  = kubernetes_namespace.monitoring.metadata[0].name
 
-  # Wait for deployment to be ready
   wait          = true
   wait_for_jobs = true
   timeout       = var.helm_timeout
 
-  # Configuration through values
   values = [
     templatefile("${path.module}/values.yaml.tpl", {
       storage_class               = var.storage_class
@@ -103,18 +64,12 @@ resource "helm_release" "kube_prometheus_stack" {
     })
   ]
 
-  # Dependencies
   depends_on = [
     kubernetes_namespace.monitoring,
     kubernetes_storage_class.monitoring_storage
   ]
 }
 
-#######################
-# Ingress (Optional)  #
-#######################
-
-# Create Grafana ingress if enabled
 resource "kubernetes_ingress_v1" "grafana_ingress" {
   count = var.grafana_ingress_enabled ? 1 : 0
 
@@ -158,7 +113,6 @@ resource "kubernetes_ingress_v1" "grafana_ingress" {
   depends_on = [helm_release.kube_prometheus_stack]
 }
 
-# Create Prometheus ingress if enabled
 resource "kubernetes_ingress_v1" "prometheus_ingress" {
   count = var.prometheus_ingress_enabled ? 1 : 0
 
