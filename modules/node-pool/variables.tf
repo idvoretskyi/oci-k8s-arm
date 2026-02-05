@@ -86,7 +86,7 @@ variable "kms_key_id" {
 
 variable "enable_pv_encryption_in_transit" {
   type    = bool
-  default = false
+  default = true
 }
 
 variable "ssh_public_key" {

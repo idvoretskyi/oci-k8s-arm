@@ -102,6 +102,35 @@ resource "oci_core_security_list" "oke_sl" {
   }
 }
 
+resource "oci_core_network_security_group" "oke_cluster_nsg" {
+  compartment_id = local.compartment_id
+  vcn_id         = oci_core_vcn.vcn.id
+  display_name   = "${local.cluster_name}-oke-cluster-nsg"
+}
+
+resource "oci_core_network_security_group_security_rule" "oke_cluster_nsg_ingress_k8s" {
+  network_security_group_id = oci_core_network_security_group.oke_cluster_nsg.id
+  direction                 = "INGRESS"
+  protocol                  = "6"
+  source                    = "0.0.0.0/0"
+  source_type               = "CIDR_BLOCK"
+
+  tcp_options {
+    destination_port_range {
+      min = 6443
+      max = 6443
+    }
+  }
+}
+
+resource "oci_core_network_security_group_security_rule" "oke_cluster_nsg_egress_all" {
+  network_security_group_id = oci_core_network_security_group.oke_cluster_nsg.id
+  direction                 = "EGRESS"
+  protocol                  = "all"
+  destination               = "0.0.0.0/0"
+  destination_type          = "CIDR_BLOCK"
+}
+
 resource "oci_core_subnet" "public_subnet" {
   compartment_id             = local.compartment_id
   vcn_id                     = oci_core_vcn.vcn.id
@@ -133,6 +162,7 @@ resource "oci_containerengine_cluster" "arm_cluster" {
   endpoint_config {
     is_public_ip_enabled = true
     subnet_id            = oci_core_subnet.public_subnet.id
+    nsg_ids              = [oci_core_network_security_group.oke_cluster_nsg.id]
   }
 
   options {
@@ -141,6 +171,10 @@ resource "oci_containerengine_cluster" "arm_cluster" {
     add_ons {
       is_kubernetes_dashboard_enabled = false
       is_tiller_enabled               = false
+    }
+
+    admission_controller_options {
+      is_pod_security_policy_enabled = true
     }
 
     kubernetes_network_config {
@@ -159,7 +193,7 @@ resource "oci_containerengine_node_pool" "arm_pool" {
 
   node_config_details {
     size                                = var.node_count
-    is_pv_encryption_in_transit_enabled = false
+    is_pv_encryption_in_transit_enabled = true
 
     placement_configs {
       availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
