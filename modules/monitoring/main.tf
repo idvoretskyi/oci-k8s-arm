@@ -10,7 +10,7 @@ locals {
   grafana_service_type = var.grafana_ingress_enabled ? "ClusterIP" : var.grafana_service_type
 }
 
-resource "kubernetes_namespace" "monitoring" {
+resource "kubernetes_namespace_v1" "monitoring" {
   metadata {
     name = var.monitoring_namespace
     labels = {
@@ -20,7 +20,7 @@ resource "kubernetes_namespace" "monitoring" {
   }
 }
 
-resource "kubernetes_storage_class" "monitoring_storage" {
+resource "kubernetes_storage_class_v1" "monitoring_storage" {
   count = var.create_storage_class ? 1 : 0
 
   metadata {
@@ -42,7 +42,7 @@ resource "helm_release" "kube_prometheus_stack" {
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"
   version    = var.chart_version
-  namespace  = kubernetes_namespace.monitoring.metadata[0].name
+  namespace  = kubernetes_namespace_v1.monitoring.metadata[0].name
 
   wait          = true
   wait_for_jobs = true
@@ -65,8 +65,8 @@ resource "helm_release" "kube_prometheus_stack" {
   ]
 
   depends_on = [
-    kubernetes_namespace.monitoring,
-    kubernetes_storage_class.monitoring_storage
+    kubernetes_namespace_v1.monitoring,
+    kubernetes_storage_class_v1.monitoring_storage
   ]
 }
 
@@ -75,7 +75,7 @@ resource "kubernetes_ingress_v1" "grafana_ingress" {
 
   metadata {
     name      = "${var.release_name}-grafana"
-    namespace = kubernetes_namespace.monitoring.metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring.metadata[0].name
     annotations = merge({
       "kubernetes.io/ingress.class"                = var.ingress_class
       "nginx.ingress.kubernetes.io/rewrite-target" = "/"
@@ -118,7 +118,7 @@ resource "kubernetes_ingress_v1" "prometheus_ingress" {
 
   metadata {
     name      = "${var.release_name}-prometheus"
-    namespace = kubernetes_namespace.monitoring.metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring.metadata[0].name
     annotations = merge({
       "kubernetes.io/ingress.class"                = var.ingress_class
       "nginx.ingress.kubernetes.io/rewrite-target" = "/"

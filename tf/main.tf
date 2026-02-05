@@ -228,3 +228,13 @@ resource "null_resource" "metrics_server" {
 
   depends_on = [oci_containerengine_node_pool.arm_pool]
 }
+
+module "monitoring" {
+  source     = "../modules/monitoring"
+  cluster_id = oci_containerengine_cluster.arm_cluster.id
+
+  depends_on = [
+    oci_containerengine_node_pool.arm_pool,
+    null_resource.metrics_server
+  ]
+}
