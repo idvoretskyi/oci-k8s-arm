@@ -48,8 +48,13 @@ jobs:
 
       - name: Install Terrascan
         run: |
+          TERRASCAN_VERSION="v1.19.1"
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y jq
+          fi
           # Use jq to reliably extract the browser_download_url for the Linux x86_64 asset
-          curl -L "$(curl -s https://api.github.com/repos/tenable/terrascan/releases/latest | jq -r '.assets[] | select(.name | test("Linux_x86_64.tar.gz$")) | .browser_download_url')" -o terrascan.tar.gz
+          curl -L "$(curl -s "https://api.github.com/repos/tenable/terrascan/releases/tags/${TERRASCAN_VERSION}" | jq -r '.assets[] | select(.name | test("Linux_x86_64.tar.gz$")) | .browser_download_url')" -o terrascan.tar.gz
           tar -xf terrascan.tar.gz terrascan
           sudo mv terrascan /usr/local/bin/
           rm terrascan.tar.gz
@@ -57,6 +62,13 @@ jobs:
       - name: Run Terrascan
         run: |
           terrascan scan -d . -o sarif --output-file terrascan.sarif || true  # Continue even if issues are found
+
+      - name: Verify SARIF file created
+        run: |
+          if [ ! -f terrascan.sarif ]; then
+            echo "terrascan.sarif not found! Check terrascan output for errors."
+            exit 1
+          fi
 
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v4  # Updated from v2 to v4
