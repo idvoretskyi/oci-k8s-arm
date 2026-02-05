@@ -73,7 +73,7 @@ jobs:
           if [ ! -f terrascan.sarif ]; then
             echo "Warning: terrascan.sarif was not created. Creating empty SARIF file."
             mkdir -p reports
-            printf '{"\$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","version":"2.1.0","runs":[{"tool":{"driver":{"name":"terrascan","version":"1.19.1"}},"results":[]}]}' > terrascan.sarif
+            printf '{"$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","version":"2.1.0","runs":[{"tool":{"driver":{"name":"terrascan","version":"fallback"}},"results":[]}]}' > terrascan.sarif
           fi
 
       - name: Verify SARIF file created
