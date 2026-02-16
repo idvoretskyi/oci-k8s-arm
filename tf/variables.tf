@@ -34,8 +34,9 @@ variable "cluster_name" {
 }
 
 variable "kubernetes_version" {
-  type    = string
-  default = "v1.34.1"
+  description = "Kubernetes version for the OKE cluster. Set to null to use the latest available version."
+  type        = string
+  default     = null
 }
 
 variable "node_count" {

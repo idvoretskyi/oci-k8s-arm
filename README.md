@@ -57,7 +57,7 @@ Common variables (`tf/variables.tf`):
 | `region` | `uk-london-1` | Deployment region |
 | `tenancy_ocid` | `null` | Read from `~/.oci/config` if null |
 | `cluster_name` | `null` | Defaults to `{username}-arm-oke-cluster` if null |
-| `kubernetes_version` | `v1.34.1` | Cluster version |
+| `kubernetes_version` | `v1.34.2` | Cluster version |
 | `node_count` | `2` | Worker nodes count |
 | `node_memory_gb` | `8` | Memory per node (GB) |
 | `node_ocpus` | `2` | OCPUs per node |

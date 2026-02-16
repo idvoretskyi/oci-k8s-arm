@@ -7,11 +7,17 @@ data "external" "current_user" {
 }
 
 locals {
-  tenancy_ocid   = data.external.oci_config.result.tenancy
-  user_ocid      = data.external.oci_config.result.user
-  compartment_id = coalesce(var.compartment_ocid, local.tenancy_ocid)
-  username       = var.username != null ? var.username : data.external.current_user.result.username
-  cluster_name   = var.cluster_name != null ? var.cluster_name : "${local.username}-arm-oke-cluster"
+  tenancy_ocid       = data.external.oci_config.result.tenancy
+  user_ocid          = data.external.oci_config.result.user
+  compartment_id     = coalesce(var.compartment_ocid, local.tenancy_ocid)
+  username           = var.username != null ? var.username : data.external.current_user.result.username
+  cluster_name       = var.cluster_name != null ? var.cluster_name : "${local.username}-arm-oke-cluster"
+  kubernetes_version = var.kubernetes_version != null ? var.kubernetes_version : data.oci_containerengine_cluster_option.options.kubernetes_versions[length(data.oci_containerengine_cluster_option.options.kubernetes_versions) - 1]
+}
+
+data "oci_containerengine_cluster_option" "options" {
+  cluster_option_id = "all"
+  compartment_id    = local.compartment_id
 }
 
 data "oci_identity_availability_domains" "ads" {
@@ -155,7 +161,7 @@ resource "oci_core_subnet" "private_subnet" {
 
 resource "oci_containerengine_cluster" "arm_cluster" {
   compartment_id     = local.compartment_id
-  kubernetes_version = var.kubernetes_version
+  kubernetes_version = local.kubernetes_version
   name               = local.cluster_name
   vcn_id             = oci_core_vcn.vcn.id
 
@@ -174,7 +180,7 @@ resource "oci_containerengine_cluster" "arm_cluster" {
     }
 
     admission_controller_options {
-      is_pod_security_policy_enabled = true
+      is_pod_security_policy_enabled = false
     }
 
     kubernetes_network_config {
@@ -187,7 +193,7 @@ resource "oci_containerengine_cluster" "arm_cluster" {
 resource "oci_containerengine_node_pool" "arm_pool" {
   compartment_id     = local.compartment_id
   cluster_id         = oci_containerengine_cluster.arm_cluster.id
-  kubernetes_version = var.kubernetes_version
+  kubernetes_version = local.kubernetes_version
   name               = "${local.cluster_name}-arm-pool"
   node_shape         = "VM.Standard.A1.Flex"
 
@@ -264,8 +270,10 @@ resource "null_resource" "metrics_server" {
 }
 
 module "monitoring" {
-  source     = "../modules/monitoring"
-  cluster_id = oci_containerengine_cluster.arm_cluster.id
+  source             = "../modules/monitoring"
+  cluster_id         = oci_containerengine_cluster.arm_cluster.id
+  create_storage_class = true
+  storage_class      = "oci-bv-paravirtualized"
 
   depends_on = [
     oci_containerengine_node_pool.arm_pool,

@@ -33,7 +33,8 @@ resource "kubernetes_storage_class_v1" "monitoring_storage" {
   volume_binding_mode    = "WaitForFirstConsumer"
 
   parameters = {
-    "fsType" = "ext4"
+    "fsType"          = "ext4"
+    "attachment-type"  = "paravirtualized"
   }
 }
 

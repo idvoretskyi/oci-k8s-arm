@@ -11,7 +11,7 @@ region = "uk-london-1"
 
 # ARM Kubernetes cluster configuration
 # cluster_name will be auto-generated as {username}-arm-oke-cluster
-kubernetes_version = "v1.34.1"
+# kubernetes_version is auto-detected (latest available) unless overridden
 
 # ARM node configuration - 3 nodes with encryption in transit disabled  
 node_count     = 3
