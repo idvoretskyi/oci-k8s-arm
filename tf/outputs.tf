@@ -23,6 +23,10 @@ output "kubeconfig_command" {
   value = "oci ce cluster create-kubeconfig --cluster-id ${oci_containerengine_cluster.arm_cluster.id} --file ~/.kube/config --region ${var.region} --token-version 2.0.0 --context-name ${oci_containerengine_cluster.arm_cluster.name}"
 }
 
+output "kubernetes_version" {
+  value = local.kubernetes_version
+}
+
 output "cluster_region" {
   value = var.region
 }
