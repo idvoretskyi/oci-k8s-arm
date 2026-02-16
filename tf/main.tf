@@ -184,7 +184,7 @@ resource "oci_containerengine_cluster" "arm_cluster" {
     }
 
     admission_controller_options {
-      is_pod_security_policy_enabled = false
+      is_pod_security_policy_enabled = true
     }
 
     kubernetes_network_config {
