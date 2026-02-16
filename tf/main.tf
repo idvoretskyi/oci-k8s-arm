@@ -277,7 +277,7 @@ module "monitoring" {
   source             = "../modules/monitoring"
   cluster_id         = oci_containerengine_cluster.arm_cluster.id
   create_storage_class = true
-  storage_class      = "oci-bv-paravirtualized"
+  storage_class      = "oci-bv"
 
   depends_on = [
     oci_containerengine_node_pool.arm_pool,
