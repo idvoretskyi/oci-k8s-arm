@@ -12,7 +12,11 @@ locals {
   compartment_id     = coalesce(var.compartment_ocid, local.tenancy_ocid)
   username           = var.username != null ? var.username : data.external.current_user.result.username
   cluster_name       = var.cluster_name != null ? var.cluster_name : "${local.username}-arm-oke-cluster"
-  kubernetes_version = var.kubernetes_version != null ? var.kubernetes_version : data.oci_containerengine_cluster_option.options.kubernetes_versions[length(data.oci_containerengine_cluster_option.options.kubernetes_versions) - 1]
+  kubernetes_version = var.kubernetes_version != null ? var.kubernetes_version : (
+    length(data.oci_containerengine_cluster_option.options.kubernetes_versions) > 0 ?
+    data.oci_containerengine_cluster_option.options.kubernetes_versions[length(data.oci_containerengine_cluster_option.options.kubernetes_versions) - 1] :
+    null
+  )
 }
 
 data "oci_containerengine_cluster_option" "options" {
